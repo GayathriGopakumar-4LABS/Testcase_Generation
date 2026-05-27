@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Download, Trash2, FileJson, FileText, FileCode } from "lucide-react";
-import { formatDate, PRIORITY_COLORS, cn } from "@/lib/utils";
-import type { Generation, GenerationListItem } from "@/types";
+import { formatDate } from "@/lib/utils";
+import type { GenerationListItem } from "@/types";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,13 +20,15 @@ import { useGeneration } from "@/hooks/use-generations";
 import { generationsApi } from "@/lib/api/generations";
 import { useAuthStore } from "@/store/auth-store";
 
-function downloadFromUrl(url: string, token: string) {
+const FORMAT_EXT: Record<string, string> = { json: "json", csv: "csv", markdown: "md" };
+
+function downloadFromUrl(url: string, token: string, filename: string) {
   fetch(url, { headers: { Authorization: `Bearer ${token}` } })
     .then((r) => r.blob())
     .then((blob) => {
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = url.split("/").pop() ?? "export";
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(a.href);
     });
@@ -47,7 +49,8 @@ export function GenerationCard({ item, projectName, onDelete }: Props) {
 
   const handleExport = (format: "json" | "csv" | "markdown") => {
     if (!token) return;
-    downloadFromUrl(generationsApi.exportUrl(item.id, format), token);
+    const filename = `${item.title}.${FORMAT_EXT[format]}`;
+    downloadFromUrl(generationsApi.exportUrl(item.id, format), token, filename);
   };
 
   return (

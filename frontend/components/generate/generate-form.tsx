@@ -97,7 +97,7 @@ export function GenerateForm({ initialValues, onResult, onValuesChange }: Props)
     watch,
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { test_type: "Functional" },
+    defaultValues: { title: "", project_id: "", test_type: "Functional", requirement: "" },
   });
 
   useEffect(() => {
@@ -106,7 +106,7 @@ export function GenerateForm({ initialValues, onResult, onValuesChange }: Props)
       initialValues &&
       Object.keys(initialValues).length > 0
     ) {
-      reset({ test_type: "Functional", ...initialValues });
+      reset({ title: "", project_id: "", test_type: "Functional", requirement: "", ...initialValues });
       didApplyInitialValues.current = true;
     }
   }, [initialValues, reset]);
