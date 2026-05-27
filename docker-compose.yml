@@ -1,12 +1,12 @@
-version: "3.9"
-
 services:
+
+  # ── PostgreSQL ────────────────────────────────────────────────────────────────
   db:
     image: postgres:16-alpine
     container_name: qa_generator_db
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
       POSTGRES_DB: qa_generator
     ports:
       - "5432:5432"
@@ -18,22 +18,43 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── FastAPI backend ───────────────────────────────────────────────────────────
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: qa_generator_backend
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/qa_generator
-      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      DATABASE_URL: postgresql+asyncpg://postgres:${DB_PASSWORD:-password}@db:5432/qa_generator
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production-use-32-plus-chars}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 1440
       GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash}
+      CORS_ORIGINS: '["http://localhost:3000"]'
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - ./backend:/app
+    # No source-code volume mount — the image is self-contained
+
+  # ── Next.js frontend ──────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Baked into the JS bundle at build time; must be reachable from the browser
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+    container_name: qa_generator_frontend
+    environment:
+      # Used server-side (next.config.ts rewrites) — reaches backend via Docker network
+      INTERNAL_API_URL: http://backend:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
