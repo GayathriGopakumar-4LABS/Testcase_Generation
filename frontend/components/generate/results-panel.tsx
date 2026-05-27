@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, FileJson, FileText, FileCode } from "lucide-react";
+import { FileJson, FileText, FileCode } from "lucide-react";
 import type { Generation } from "@/types";
 import { generationsApi } from "@/lib/api/generations";
 import { useAuthStore } from "@/store/auth-store";
@@ -12,14 +12,15 @@ interface Props {
   generation: Generation;
 }
 
-function downloadFromUrl(url: string, token: string) {
-  // For file downloads with auth, fetch the blob and trigger download
+const FORMAT_EXT: Record<string, string> = { json: "json", csv: "csv", markdown: "md" };
+
+function downloadFromUrl(url: string, token: string, filename: string) {
   fetch(url, { headers: { Authorization: `Bearer ${token}` } })
     .then((r) => r.blob())
     .then((blob) => {
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = url.split("/").pop() ?? "export";
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(a.href);
     });
@@ -30,7 +31,8 @@ export function ResultsPanel({ generation }: Props) {
 
   const handleExport = (format: "json" | "csv" | "markdown") => {
     if (!token) return;
-    downloadFromUrl(generationsApi.exportUrl(generation.id, format), token);
+    const filename = `${generation.title}.${FORMAT_EXT[format]}`;
+    downloadFromUrl(generationsApi.exportUrl(generation.id, format), token, filename);
   };
 
   return (
